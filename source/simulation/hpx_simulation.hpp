@@ -295,12 +295,14 @@ double HPXSimulationUnit<ProblemType>::ResidualL2() {
 
 template <typename ProblemType>
 class HPXSimulationUnitClient
-    : hpx::components::client_base<HPXSimulationUnitClient<ProblemType>, HPXSimulationUnit<ProblemType>> {
+    : public hpx::components::client_base<HPXSimulationUnitClient<ProblemType>, HPXSimulationUnit<ProblemType>> {
   private:
     using BaseType = hpx::components::client_base<HPXSimulationUnitClient<ProblemType>, HPXSimulationUnit<ProblemType>>;
 
   public:
     HPXSimulationUnitClient(hpx::future<hpx::id_type>&& id) : BaseType(std::move(id)) {}
+
+    static constexpr const char* GetBasename() { return "Simulation_Unit_Client_"; }
 
     hpx::future<void> Preprocessor() {
         using ActionType = typename HPXSimulationUnit<ProblemType>::PreprocessorAction;
@@ -348,7 +350,7 @@ class HPXSimulation : public hpx::components::simple_component_base<HPXSimulatio
             input.mesh_file_name.substr(input.mesh_file_name.find_last_of('.'), input.mesh_file_name.size());
 
         uint submesh_id = 0;
-
+        std::vector<hpx::future<void>> registration_futures;
         while (Utilities::file_exists(submesh_file_prefix + std::to_string(submesh_id) + submesh_file_postfix)) {
             hpx::future<hpx::id_type> simulation_unit_id =
                 hpx::new_<hpx::components::simple_component<HPXSimulationUnit<ProblemType>>>(
@@ -356,8 +358,13 @@ class HPXSimulation : public hpx::components::simple_component_base<HPXSimulatio
 
             this->simulation_unit_clients.emplace_back(std::move(simulation_unit_id));
 
+            registration_futures.push_back(this->simulation_unit_clients.back().register_as(
+                                               std::string{HPXSimulationUnitClient<ProblemType>::GetBasename()}+
+                                               std::to_string(locality_id)+'_'+std::to_string(submesh_id)));
             ++submesh_id;
         }
+
+        hpx::when_all(registration_futures).get();
     }
 
     hpx::future<void> Run();
