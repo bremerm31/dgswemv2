@@ -19,13 +19,7 @@
 
 #include "simulation/hpx_simulation.hpp"
 
-using hpx_simulation_unit_swe = HPXSimulationUnit<SWE::Problem>;
-using hpx_simulation_unit_swe_component = hpx::components::simple_component<HPXSimulationUnit<SWE::Problem>>;
-HPX_REGISTER_COMPONENT(hpx_simulation_unit_swe_component, hpx_simulation_unit_swe);
-
-using hpx_simulation_swe = HPXSimulation<SWE::Problem>;
-using hpx_simulation_swe_component = hpx::components::simple_component<HPXSimulation<SWE::Problem>>;
-HPX_REGISTER_COMPONENT(hpx_simulation_swe_component, hpx_simulation_swe);
+DGSWEMV2_REGISTER_COMPONENTS(SWE::Problem);
 
 int main(int argc, char* argv[]) {
     if (argc != 2) {
