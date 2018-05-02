@@ -47,7 +47,7 @@ class HPXSimulation : public hpx::components::simple_component_base<HPXSimulatio
 
         InputParameters<typename ProblemType::ProblemInputType> input(input_string);
 
-        hpx::future<void> lb_future = LoadBalancer::AbstractFactory::initialize_locality_and_world_models<ProblemType>(locality_id);
+        hpx::future<void> lb_future = LoadBalancer::AbstractFactory::initialize_locality_and_world_models<ProblemType>(locality_id, input_string);
 
         this->n_steps = (uint)std::ceil(input.T_end / input.dt);
         this->n_stages = input.rk.nstages;
