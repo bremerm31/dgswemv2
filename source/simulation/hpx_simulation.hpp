@@ -89,26 +89,26 @@ hpx::future<void> HPXSimulation<ProblemType>::Run() {
         simulation_futures.push_back(sim_unit_client.Preprocessor());
     }
 
-    for (uint sim_id = 0; sim_id < this->simulation_unit_clients.size(); sim_id++) {
+    for (uint sim_id = 0; sim_id < this->simulation_unit_clients.size(); ++sim_id) {
         simulation_futures[sim_id] =
             simulation_futures[sim_id]
                 .then([this, sim_id](auto&&) { return this->simulation_unit_clients[sim_id].Launch(); });
     }
 
-    for (uint step = 1; step <= this->n_steps; step++) {
-        for (uint sim_id = 0; sim_id < this->simulation_unit_clients.size(); sim_id++) {
+    for (uint step = 1; step <= this->n_steps; ++step) {
+        for (uint sim_id = 0; sim_id < this->simulation_unit_clients.size(); ++sim_id) {
             simulation_futures[sim_id] =
                 simulation_futures[sim_id]
                     .then([this, sim_id](auto&&) { return this->simulation_unit_clients[sim_id].Step(); });
         }
 
         // Ignore, this is part of debugging efforts
-        //if ( step % 100 == 0 ) {
-        //    simulation_futures[0] = simulation_futures[0]
-        //        .then([this](auto&&) {
-        //                this->simulation_unit_clients[0].SerializeAndUnserialize();
-        //            });
-        //}
+        if ( step % 100 == 0 ) {
+            simulation_futures[0] = simulation_futures[0]
+                .then([this](auto&&) {
+                        return this->simulation_unit_clients[0].SerializeAndUnserialize();
+                    });
+        }
     }
     return hpx::when_all(simulation_futures).then([](auto&&) {
             LoadBalancer::AbstractFactory::reset_locality_and_world_models<ProblemType>();

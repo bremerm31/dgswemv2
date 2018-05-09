@@ -19,7 +19,7 @@ class Writer {
     bool WritingLog() const { return writing_log_file; }
     bool WritingVerboseLog() const { return (writing_log_file && verbose_log_file); }
     std::ofstream& GetLogFile() const { return log_file; }
-    void StartLog();
+    void StartLog(const std::ios_base::openmode mode = std::ios_base::out);
 
     bool WritingOutput() { return writing_output; }
     void WriteFirstStep(const Stepper& stepper, typename ProblemType::ProblemMeshType& mesh);
@@ -77,8 +77,8 @@ Writer<ProblemType>::Writer(const InputParameters<typename ProblemType::ProblemI
 }
 
 template <typename ProblemType>
-void Writer<ProblemType>::StartLog() {
-    log_file = std::ofstream(log_file_name, std::ofstream::out);
+void Writer<ProblemType>::StartLog(const std::ios_base::openmode mode) {
+    log_file = std::ofstream(log_file_name, mode);
 
     if (!log_file) {
         std::cerr << "Error in opening log file, presumably the output directory does not exists.\n";
