@@ -149,9 +149,9 @@ hpx::future<void> HPXSimulationUnit<ProblemType>::Stage() {
                                   << std::endl;
     }
 
-    //auto distributed_boundary_send_kernel = [this](auto& dbound) {
-    //    ProblemType::distributed_boundary_send_kernel(this->stepper, dbound);
-    //};
+    auto distributed_boundary_send_kernel = [this](auto& dbound) {
+        ProblemType::distributed_boundary_send_kernel(this->stepper, dbound);
+    };
 
     auto volume_kernel = [this](auto& elt) { ProblemType::volume_kernel(this->stepper, elt); };
 
@@ -164,12 +164,12 @@ hpx::future<void> HPXSimulationUnit<ProblemType>::Stage() {
     if (this->writer.WritingVerboseLog()) {
         this->writer.GetLogFile() << "Exchanging data" << std::endl;
     }
-    hpx::future<void> receive_future = hpx::make_ready_future();
-    //hpx::future<void> receive_future = this->communicator.ReceiveAll(this->stepper.get_timestamp());
 
-    //this->mesh.CallForEachDistributedBoundary(distributed_boundary_send_kernel);
+    hpx::future<void> receive_future = this->communicator.ReceiveAll(this->stepper.get_timestamp());
 
-    //this->communicator.SendAll(this->stepper.get_timestamp());
+    this->mesh.CallForEachDistributedBoundary(distributed_boundary_send_kernel);
+
+    this->communicator.SendAll(this->stepper.get_timestamp());
 
     if (this->writer.WritingVerboseLog()) {
         this->writer.GetLogFile() << "Starting work before receive" << std::endl;
@@ -194,9 +194,9 @@ hpx::future<void> HPXSimulationUnit<ProblemType>::Stage() {
             this->writer.GetLogFile() << "Starting work after receive" << std::endl;
         }
 
-        //auto distributed_boundary_kernel = [this](auto& dbound) {
-        //    ProblemType::distributed_boundary_kernel(this->stepper, dbound);
-        //};
+        auto distributed_boundary_kernel = [this](auto& dbound) {
+            ProblemType::distributed_boundary_kernel(this->stepper, dbound);
+        };
 
         auto update_kernel = [this](auto& elt) { ProblemType::update_kernel(this->stepper, elt); };
 
@@ -204,7 +204,7 @@ hpx::future<void> HPXSimulationUnit<ProblemType>::Stage() {
             ProblemType::scrutinize_solution_kernel(this->stepper, elt);
         };
 
-        //this->mesh.CallForEachDistributedBoundary(distributed_boundary_kernel);
+        this->mesh.CallForEachDistributedBoundary(distributed_boundary_kernel);
 
         this->mesh.CallForEachElement(update_kernel);
 
@@ -222,12 +222,11 @@ hpx::future<void> HPXSimulationUnit<ProblemType>::Postprocessor() {
         this->writer.GetLogFile() << "Exchanging postprocessor data" << std::endl;
     }
 
-    hpx::future<void> receive_future = hpx::make_ready_future();
-    //hpx::future<void> receive_future = this->communicator.ReceivePostprocAll(this->stepper.get_timestamp());
+    hpx::future<void> receive_future = this->communicator.ReceivePostprocAll(this->stepper.get_timestamp());
 
     ProblemType::postprocessor_parallel_pre_send_kernel(this->stepper, this->mesh);
 
-    //this->communicator.SendPostprocAll(this->stepper.get_timestamp());
+    this->communicator.SendPostprocAll(this->stepper.get_timestamp());
 
     if (this->writer.WritingVerboseLog()) {
         this->writer.GetLogFile() << "Starting postprocessor work before receive" << std::endl;
@@ -246,7 +245,7 @@ hpx::future<void> HPXSimulationUnit<ProblemType>::Postprocessor() {
             this->writer.GetLogFile() << "Starting postprocessor work after receive" << std::endl;
         }
 
-        //ProblemType::postprocessor_parallel_post_receive_kernel(this->stepper, this->mesh);
+        ProblemType::postprocessor_parallel_post_receive_kernel(this->stepper, this->mesh);
 
         ++(this->stepper);
 
@@ -313,10 +312,12 @@ void HPXSimulationUnit<ProblemType>::SerializeAndUnserialize() {
 
   stepper=Stepper();
   writer= std::move(Writer<ProblemType>());
-  //parser=ProblemType::ProblemParserType();
+  using ParserType  = typename ProblemType::ProblemParserType;
+  parser=ParserType();
   using MeshType = typename ProblemType::ProblemMeshType;
   mesh = MeshType();
-  //problem_input = ProblemType::ProblemInputType();
+  using ProbInputType = typename ProblemType::ProblemInputType;
+  problem_input = ProbInputType();
   //std::unique_ptr<LoadBalancer::SubmeshModel> submesh_model = nullptr;
 
   hpx::serialization::input_archive iarchive(buffer);
@@ -332,13 +333,13 @@ void HPXSimulationUnit<ProblemType>::save(Archive& ar, unsigned) const {
   }
 
     //ar & stepper & writer & parser & mesh & problem_input & communicator & submesh_model;
-    ar & stepper & writer & mesh;
+    ar & stepper & writer & parser & mesh & problem_input;
 }
 
 template <typename ProblemType>
 template <typename Archive>
 void HPXSimulationUnit<ProblemType>::load(Archive& ar, unsigned) {
-  ar & stepper & writer & mesh;
+    ar & stepper & writer & parser & mesh & problem_input;
   // ar & stepper & writer & parser & mesh & problem_input & communicator & submesh_model;
 
   this->writer.StartLog(std::ios_base::app);
