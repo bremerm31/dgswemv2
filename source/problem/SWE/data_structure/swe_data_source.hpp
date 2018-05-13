@@ -21,7 +21,24 @@ struct Source {
     std::vector<double> p_atm;
     std::vector<double> tidal_pot;
     std::vector<double> manning_n;
-};
-}
 
+#ifdef HAS_HPX
+    template <typename Archive>
+    void serialize(Archive& ar, unsigned);
+#endif
+};
+
+#ifdef HAS_HPX
+template <typename Archive>
+void Source::serialize(Archive& ar, unsigned) {
+    ar & coriolis_f
+       & g_manning_n_sq
+       & tau_s
+       & p_atm
+       & tidal_pot
+       & manning_n
+       & manning;
+}
+#endif
+}
 #endif
