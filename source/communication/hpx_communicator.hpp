@@ -27,30 +27,48 @@ struct HPXRankBoundary {
     std::vector<double> send_postproc_buffer;
     std::vector<double> receive_postproc_buffer;
 
-    void send_preproc(uint timestamp) { outgoing.set(send_preproc_buffer, timestamp); }
+    void send_preproc(uint timestamp) {
+        assert(outgoing);
+        outgoing.set(send_preproc_buffer, timestamp);
+    }
 
     hpx::future<void> receive_preproc(uint timestamp) {
+        assert(incoming);
         return incoming.get(timestamp)
             .then([this](hpx::future<array_double> msg_future) { this->receive_preproc_buffer = msg_future.get(); });
     }
 
-    void send(uint timestamp) { outgoing.set(send_buffer, timestamp); }
+    void send(uint timestamp) {
+        assert(outgoing);
+        outgoing.set(send_buffer, timestamp);
+    }
 
     hpx::future<void> receive(uint timestamp) {
+        assert(incoming);
         return incoming.get(timestamp)
             .then([this](hpx::future<array_double> msg_future) { this->receive_buffer = msg_future.get(); });
     }
 
-    void send_postproc(uint timestamp) { outgoing.set(send_postproc_buffer, timestamp); }
+    void send_postproc(uint timestamp) {
+        assert(outgoing);
+        outgoing.set(send_postproc_buffer, timestamp);
+    }
 
     hpx::future<void> receive_postproc(uint timestamp) {
+        assert(incoming);
         return incoming.get(timestamp)
             .then([this](hpx::future<array_double> msg_future) { this->receive_postproc_buffer = msg_future.get(); });
     }
 
     template <typename Archive>
     void serialize(Archive& ar, unsigned) {
-        ar& elements& bound_ids& p& outgoing& incoming;
+        ar& elements& bound_ids& p& outgoing& incoming
+            & send_preproc_buffer //probably unnecessary (can be optimized later)
+            & receive_preproc_buffer
+            & send_buffer
+            & receive_buffer
+            & send_postproc_buffer
+            & receive_postproc_buffer;
     }
 };
 
