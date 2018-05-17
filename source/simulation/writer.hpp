@@ -19,7 +19,7 @@ class Writer {
     bool WritingLog() const { return writing_log_file; }
     bool WritingVerboseLog() const { return (writing_log_file && verbose_log_file); }
     std::ofstream& GetLogFile() const { return log_file; }
-    void StartLog();
+    void StartLog(const std::ios_base::openmode& mode = std::ios::out);
 
     bool WritingOutput() { return writing_output; }
     void WriteFirstStep(const Stepper& stepper, typename ProblemType::ProblemMeshType& mesh);
@@ -33,6 +33,7 @@ class Writer {
   private:
     bool writing_output;
     std::string output_path;
+    uint version;
 
     bool writing_log_file;
     bool verbose_log_file;
@@ -59,7 +60,8 @@ Writer<ProblemType>::Writer(const InputParameters<typename ProblemType::ProblemI
       writing_vtk_output(input.writer_input.writing_vtk_output),
       vtk_output_frequency(input.writer_input.vtk_output_frequency),
       writing_modal_output(input.writer_input.writing_modal_output),
-      modal_output_frequency(input.writer_input.modal_output_frequency) {
+      modal_output_frequency(input.writer_input.modal_output_frequency),
+      version(0) {
     if (writing_log_file) {
         log_file_name = output_path + input.writer_input.log_file_name;
     }
@@ -72,13 +74,13 @@ Writer<ProblemType>::Writer(const InputParameters<typename ProblemType::ProblemI
     : Writer(input) {
     if (writing_log_file) {
         log_file_name = output_path + input.writer_input.log_file_name + '_' + std::to_string(locality_id) + '_' +
-                        std::to_string(submesh_id);
+            std::to_string(submesh_id);
     }
 }
 
 template <typename ProblemType>
-void Writer<ProblemType>::StartLog() {
-    log_file = std::ofstream(log_file_name, std::ofstream::out);
+void Writer<ProblemType>::StartLog(const std::ios_base::openmode& mode) {
+    log_file = std::ofstream(log_file_name + '_' + std::to_string(version++));
 
     if (!log_file) {
         std::cerr << "Error in opening log file, presumably the output directory does not exists.\n";
@@ -197,7 +199,8 @@ void Writer<ProblemType>::serialize(Archive& ar, unsigned) {
        & vtk_file_name_geom
        & vtk_file_name_raw
        & writing_modal_output
-       & modal_output_frequency;
+       & modal_output_frequency
+       & version;
 }
 #endif
 #endif
