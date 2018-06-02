@@ -32,8 +32,8 @@ class Writer {
 
   private:
     bool writing_output;
-    std::string output_path;
     uint version;
+    std::string output_path;
 
     bool writing_log_file;
     bool verbose_log_file;
@@ -54,15 +54,15 @@ class Writer {
 template <typename ProblemType>
 Writer<ProblemType>::Writer(const InputParameters<typename ProblemType::ProblemInputType>& input)
     : writing_output(input.writer_input.writing_output),
+      version(0),
       output_path(input.writer_input.output_path),
       writing_log_file(input.writer_input.writing_log_file),
       verbose_log_file(input.writer_input.verbose_log_file),
       writing_vtk_output(input.writer_input.writing_vtk_output),
       vtk_output_frequency(input.writer_input.vtk_output_frequency),
       writing_modal_output(input.writer_input.writing_modal_output),
-      modal_output_frequency(input.writer_input.modal_output_frequency),
-      version(0) {
-    if (writing_log_file) {
+      modal_output_frequency(input.writer_input.modal_output_frequency) {
+      if (writing_log_file) {
         log_file_name = output_path + input.writer_input.log_file_name;
     }
 }
