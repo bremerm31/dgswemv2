@@ -47,7 +47,7 @@ class HPXSimulation : public hpx::components::simple_component_base<HPXSimulatio
 
         InputParameters<typename ProblemType::ProblemInputType> input(input_string);
 
-        hpx::future<void> lb_future = LoadBalancer::AbstractFactory::initialize_locality_and_world_models<ProblemType>(locality_id, input_string);
+//        hpx::future<void> lb_future = LoadBalancer::AbstractFactory::initialize_locality_and_world_models<ProblemType>(locality_id, input_string);
 
         this->n_steps = (uint)std::ceil(input.T_end / input.dt);
         this->n_stages = input.rk.nstages;
@@ -58,20 +58,23 @@ class HPXSimulation : public hpx::components::simple_component_base<HPXSimulatio
             input.mesh_file_name.substr(input.mesh_file_name.find_last_of('.'), input.mesh_file_name.size());
 
         uint submesh_id = 0;
+        std::cout << "filename: " << submesh_file_prefix + std::to_string(submesh_id) + submesh_file_postfix << std::endl;
         std::vector<hpx::future<void>> registration_futures;
         while (Utilities::file_exists(submesh_file_prefix + std::to_string(submesh_id) + submesh_file_postfix)) {
+            std::cout << "filename: " << submesh_file_prefix + std::to_string(submesh_id) + submesh_file_postfix << '\n';
             this->simulation_unit_clients.emplace_back(hpx::new_<client_t>(
                     here, input_string, locality_id, submesh_id)
                 );
 
-            registration_futures.push_back(this->simulation_unit_clients.back().register_as(
-                                               std::string{client_t::GetBasename()}+
-                                               std::to_string(locality_id)+'_'+std::to_string(submesh_id)));
+            std::string submesh_name{client_t::GetBasename()+std::to_string(locality_id)+'_'+std::to_string(submesh_id)};
+            std::cout << "registering " << submesh_name << '\n';
+            //registration_futures.push_back(this->simulation_unit_clients.back().register_as(submesh_name));
             ++submesh_id;
         }
 
-        hpx::when_all(registration_futures).get();
-        lb_future.get();
+        //hpx::when_all(registration_futures).get();
+//        lb_future.get();
+        std::cout << "leaving hpx simulation" << std::endl;
     }
 
     hpx::future<void> Run();
