@@ -126,6 +126,12 @@ class Mesh<std::tuple<Elements...>,
                 MasterType& master_elt = std::get<Utilities::index<
                     MasterType, MasterElementTypes>::value>(this->masters);
                 element.SetMaster(master_elt);
+                assert( element.master == &master_elt );
+            });
+
+        this->CallForEachElement([](auto& element) {
+                assert( element.master );
+                assert( element.master->phi_gp.size() > 0);
             });
     }
 

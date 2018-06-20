@@ -167,6 +167,8 @@ class Shape {
     Shape()=default;
     Shape(const std::vector<Point<dimension>>& nodal_coordinates) : nodal_coordinates(nodal_coordinates) {}
 
+    virtual ~Shape() = default;
+
     virtual bool CheckJacobianPositive(const Point<dimension>& point)= 0;
 
     virtual Point<dimension> GetBarycentricCoordinates() = 0;

@@ -17,10 +17,11 @@ class HPXSimulationUnit
                   hpx::components::component_base<HPXSimulationUnit<ProblemType>>
               > {
   private:
-    using BaseType = hpx::components::migration_support<
+/*    using BaseType = hpx::components::migration_support<
                          hpx::components::component_base<HPXSimulationUnit<ProblemType>>
-                     >;
+                         >;*/
 
+    uint state;
     Stepper stepper;
 
     Writer<ProblemType> writer;
@@ -74,6 +75,8 @@ class HPXSimulationUnit
 
 template <typename ProblemType>
 HPXSimulationUnit<ProblemType>::HPXSimulationUnit(const std::string& input_string, const uint locality_id, const uint submesh_id) {
+    static_assert(std::is_move_constructible<HPXSimulationUnit<ProblemType>>::value, "Error: simulation unit must be move constructible");
+    this->state = 0;
     InputParameters<typename ProblemType::ProblemInputType> input(input_string, locality_id, submesh_id);
     this->stepper = Stepper(input.rk.nstages, input.rk.order, input.dt, input.T_end);
     this->problem_input = input.problem_input;
@@ -104,7 +107,7 @@ HPXSimulationUnit<ProblemType>::HPXSimulationUnit(const std::string& input_strin
     initialize_mesh<ProblemType, HPXCommunicator>(
         this->mesh, input.mesh_data, this->communicator, this->problem_input, this->writer);
 
-    ProblemType::initialize_data_parallel_pre_send_kernel(this->mesh, input.mesh_data, this->problem_input);
+        ProblemType::initialize_data_parallel_pre_send_kernel(this->mesh, input.mesh_data, this->problem_input);
 }
 
 template <typename ProblemType>
@@ -157,7 +160,7 @@ hpx::future<void> HPXSimulationUnit<ProblemType>::Stage() {
                                   << std::endl;
     }
 
-    this->Parse();
+    //this->Parse();
 
     if (this->writer.WritingVerboseLog()) {
         this->writer.GetLogFile() << "Finished Parse()" << std::endl;
@@ -179,15 +182,26 @@ hpx::future<void> HPXSimulationUnit<ProblemType>::Stage() {
         this->writer.GetLogFile() << "Exchanging data" << std::endl;
     }
 
-    hpx::future<void> receive_future = this->communicator.ReceiveAll(this->stepper.get_timestamp());
+    //hpx::future<void> receive_future = this->communicator.ReceiveAll(this->stepper.get_timestamp());
 
-    this->mesh.CallForEachDistributedBoundary(distributed_boundary_send_kernel);
+    //this->mesh.CallForEachDistributedBoundary(distributed_boundary_send_kernel);
 
-    this->communicator.SendAll(this->stepper.get_timestamp());
+    //this->communicator.SendAll(this->stepper.get_timestamp());
 
     if (this->writer.WritingVerboseLog()) {
         this->writer.GetLogFile() << "Starting work before receive" << std::endl;
     }
+
+    auto assert_functor = [](auto& element)->bool {
+        if ( element.master->phi_gp.size() > 0 ) { return true; }
+
+        std::cout << "On locality " << hpx::find_here() << std::endl;
+        return false;
+    };
+    this->mesh.CallForEachElement([assert_functor](auto& element) {
+            assert(element.master);
+            assert(assert_functor(element));
+        });
 
     this->mesh.CallForEachElement(volume_kernel);
 
@@ -203,7 +217,7 @@ hpx::future<void> HPXSimulationUnit<ProblemType>::Stage() {
                                   << std::endl;
     }
 
-    return receive_future.then([this](auto&&) {
+//    return receive_future.then([this](auto&&) {
         if (this->writer.WritingVerboseLog()) {
             this->writer.GetLogFile() << "Starting work after receive" << std::endl;
         }
@@ -218,7 +232,7 @@ hpx::future<void> HPXSimulationUnit<ProblemType>::Stage() {
             ProblemType::scrutinize_solution_kernel(this->stepper, elt);
         };
 
-        this->mesh.CallForEachDistributedBoundary(distributed_boundary_kernel);
+        //      this->mesh.CallForEachDistributedBoundary(distributed_boundary_kernel);
 
         this->mesh.CallForEachElement(update_kernel);
 
@@ -227,18 +241,27 @@ hpx::future<void> HPXSimulationUnit<ProblemType>::Stage() {
         if (this->writer.WritingVerboseLog()) {
             this->writer.GetLogFile() << "Finished work after receive" << std::endl << std::endl;
         }
-        });
+//        });
+        return hpx::make_ready_future();
 }
 
 template <typename ProblemType>
 hpx::future<void> HPXSimulationUnit<ProblemType>::Postprocessor() {
-    if (this->writer.WritingVerboseLog()) {
+/*    if (this->writer.WritingVerboseLog()) {
         this->writer.GetLogFile() << "Exchanging postprocessor data" << std::endl;
     }
 
     hpx::future<void> receive_future = this->communicator.ReceivePostprocAll(this->stepper.get_timestamp());
 
+    if (this->writer.WritingVerboseLog()) {
+        this->writer.GetLogFile() << "postprocessor_parallel_pre_send_kernel" << std::endl;
+    }
+
     ProblemType::postprocessor_parallel_pre_send_kernel(this->stepper, this->mesh);
+
+    if (this->writer.WritingVerboseLog()) {
+        this->writer.GetLogFile() << "sendpostprocall" << std::endl;
+    }
 
     this->communicator.SendPostprocAll(this->stepper.get_timestamp());
 
@@ -266,7 +289,9 @@ hpx::future<void> HPXSimulationUnit<ProblemType>::Postprocessor() {
         if (this->writer.WritingVerboseLog()) {
             this->writer.GetLogFile() << "Finished postprocessor work after receive" << std::endl << std::endl;
         }
-        });
+        });*/
+    ++(this->stepper);
+    return hpx::make_ready_future();
 }
 
 template <typename ProblemType>
@@ -282,6 +307,18 @@ void HPXSimulationUnit<ProblemType>::SwapStates() {
 
 template <typename ProblemType>
 hpx::future<void> HPXSimulationUnit<ProblemType>::Step() {
+    auto assert_functor = [](auto& element)->bool {
+        if ( element.master->phi_gp.size() > 0 ) { return true; }
+
+        std::cout << "On locality " << hpx::find_here() << std::endl;
+        return false;
+    };
+    this->mesh.CallForEachElement([assert_functor](auto& element) {
+            assert(element.master);
+            assert(assert_functor(element)); //code throws here
+        });
+
+
     hpx::future<void> step_future = hpx::make_ready_future();
 
     for (uint stage = 0; stage < this->stepper.get_num_stages(); stage++) {
@@ -292,10 +329,11 @@ hpx::future<void> HPXSimulationUnit<ProblemType>::Step() {
 
         step_future = step_future.then([this](auto&&) {
                 return this->Postprocessor();
-            });
+                });
     }
 
     return step_future.then([this](auto&&) {
+            assert(this->submesh_model);
             this->submesh_model->InStep(0,0);
             this->SwapStates();
             });
@@ -318,7 +356,6 @@ double HPXSimulationUnit<ProblemType>::ResidualL2() {
 
 template <typename ProblemType>
 void HPXSimulationUnit<ProblemType>::SerializeAndUnserialize() {
-
   std::cout << "serializing...\n";
   std::vector<char> buffer;
   hpx::serialization::output_archive oarchive(buffer);
@@ -326,13 +363,13 @@ void HPXSimulationUnit<ProblemType>::SerializeAndUnserialize() {
 
   stepper=Stepper();
   writer= std::move(Writer<ProblemType>());
-  //using ParserType  = typename ProblemType::ProblemParserType;
-  //parser=ParserType();
-  //using MeshType = typename ProblemType::ProblemMeshType;
-  //mesh = MeshType();
-  //using ProbInputType = typename ProblemType::ProblemInputType;
-  //problem_input = ProbInputType();
-  //std::unique_ptr<LoadBalancer::SubmeshModel> submesh_model = nullptr;
+  using ParserType  = typename ProblemType::ProblemParserType;
+  parser=ParserType();
+  using MeshType = typename ProblemType::ProblemMeshType;
+  mesh = MeshType();
+  using ProbInputType = typename ProblemType::ProblemInputType;
+  problem_input = ProbInputType();
+  std::unique_ptr<LoadBalancer::SubmeshModel> submesh_model = nullptr;
 
   hpx::serialization::input_archive iarchive(buffer);
   this->load(iarchive,0);
@@ -343,26 +380,40 @@ template <typename ProblemType>
 template <typename Archive>
 void HPXSimulationUnit<ProblemType>::save(Archive& ar, unsigned) const {
     if (this->writer.WritingVerboseLog()) {
-        std::cout << "Departing from locality " << hpx::get_locality_id() << std::endl;
+        std::pair<uint,uint> tag = submesh_model->get_tag();
+        std::cout << tag.first << "," << tag.second << " departing from locality " << hpx::get_locality_id() << std::endl;
         this->writer.GetLogFile() << "Departing from locality " << hpx::get_locality_id() << std::endl;
     }
 
-    ar & stepper & writer;// & parser;// & mesh;// & problem_input;// & communicator & submesh_model;
+    ar & state & stepper & writer & parser & mesh & problem_input & submesh_model;
 }
 
 template <typename ProblemType>
 template <typename Archive>
 void HPXSimulationUnit<ProblemType>::load(Archive& ar, unsigned) {
-    ar & stepper & writer;// & parser;// & mesh;// & problem_input;// & communicator & submesh_model;
+    ar & state & stepper & writer & parser & mesh & problem_input & submesh_model;
 
     this->writer.StartLog();
 
     if (this->writer.WritingVerboseLog()) {
-        std::cout << "Arriving on locality " << hpx::get_locality_id() << std::endl;
+        std::pair<uint,uint> tag = submesh_model->get_tag();
+        std::cout << tag.first << "," << tag.second << " arriving on locality " << hpx::get_locality_id() << std::endl;
         this->writer.GetLogFile() << "Arriving on locality " << hpx::get_locality_id() << std::endl;
     }
 
-    //initialize_mesh_interfaces_boundaries<ProblemType,HPXCommunicator>(mesh, communicator, writer);
+    this->mesh.CallForEachElement([](auto& element) {
+            assert(element.master);
+            assert(element.master->phi_gp.size() > 0);
+        });
+
+
+    initialize_mesh_interfaces_boundaries<ProblemType,HPXCommunicator>(mesh, communicator, writer);
+
+    this->mesh.CallForEachElement([](auto& element) {
+            assert(element.master);
+            assert(element.master->phi_gp.size() > 0);
+        });
+
 }
 
 template <typename ProblemType>

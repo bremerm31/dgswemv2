@@ -114,10 +114,11 @@ class Distributed {
                        const double qx_at_baryctr_in,
                        const double qy_at_baryctr_in,
                        const double bath_at_baryctr_in) {
-        this->send_postproc_buffer[ze_at_baryctr_index] = ze_at_baryctr_in;
-        this->send_postproc_buffer[qx_at_baryctr_index] = qx_at_baryctr_in;
-        this->send_postproc_buffer[qy_at_baryctr_index] = qy_at_baryctr_in;
-        this->send_postproc_buffer[bath_at_baryctr_index] = bath_at_baryctr_in;
+        assert(this->send_postproc_buffer.size() > 0 );
+        this->send_postproc_buffer.at(ze_at_baryctr_index) = ze_at_baryctr_in;
+        this->send_postproc_buffer.at(qx_at_baryctr_index) = qx_at_baryctr_in;
+        this->send_postproc_buffer.at(qy_at_baryctr_index) = qy_at_baryctr_in;
+        this->send_postproc_buffer.at(bath_at_baryctr_index) = bath_at_baryctr_in;
     }
 
     void GetPostprocEX(double& ze_at_baryctr_ex,

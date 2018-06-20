@@ -90,6 +90,7 @@ void HPXCommunicator::SendAll(const uint timestamp) {
     for (auto& rank_boundary : this->rank_boundaries) {
         rank_boundary.send(timestamp);
     }
+    hpx::cout << "sent all: " << timestamp << hpx::endl;
 }
 
 hpx::future<void> HPXCommunicator::ReceiveAll(const uint timestamp) {
@@ -100,7 +101,9 @@ hpx::future<void> HPXCommunicator::ReceiveAll(const uint timestamp) {
         receive_futures.push_back(rank_boundary.receive(timestamp));
     }
 
-    return hpx::when_all(receive_futures);
+    return hpx::when_all(receive_futures).then([timestamp](auto&&) {
+            hpx::cout << "received all: " << timestamp << hpx::endl;
+        });
 }
 
 void HPXCommunicator::SendPostprocAll(const uint timestamp) {

@@ -30,7 +30,7 @@ hpx::future<double> ComputeL2Residual(std::vector<ClientType>& clients) {
 
 
 template <typename ProblemType>
-class HPXSimulation : public hpx::components::simple_component_base<HPXSimulation<ProblemType>> {
+class HPXSimulation : public hpx::components::component_base<HPXSimulation<ProblemType>> {
   private:
     uint n_steps;
     uint n_stages;
@@ -74,6 +74,7 @@ class HPXSimulation : public hpx::components::simple_component_base<HPXSimulatio
 
         hpx::when_all(registration_futures).get();
         lb_future.get();
+        std::cout << "Leaving HPXSimulation COnstructor" << std::endl;
     }
 
     hpx::future<void> Run();
@@ -97,14 +98,18 @@ hpx::future<void> HPXSimulation<ProblemType>::Run() {
                 .then([this, sim_id](auto&&) { return this->simulation_unit_clients[sim_id].Launch(); });
     }
 
+    hpx::cout << this->n_steps << '\n'
+              << this->simulation_unit_clients.size() << hpx::endl;
+
     for (uint step = 1; step <= this->n_steps; step++) {
         for (uint sim_id = 0; sim_id < this->simulation_unit_clients.size(); sim_id++) {
             simulation_futures[sim_id] =
                 simulation_futures[sim_id]
-                    .then([this, sim_id](auto&&) { return this->simulation_unit_clients[sim_id].Step(); });
+                    .then([this, sim_id](auto&&) {
+                            return this->simulation_unit_clients[sim_id].Step(); });
         }
 
-        if ( step % 100 == 0 ) {
+        if ( step % 25 == 0 ) {
             simulation_futures[0] = simulation_futures[0]
                 .then([this](auto&&) {
                         return this->simulation_unit_clients[0].SerializeAndUnserialize();

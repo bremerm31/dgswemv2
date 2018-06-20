@@ -9,11 +9,11 @@ class Element {
 
   public:
     DataType data;
+    MasterType* master = nullptr;
 
   private:
     uint ID;
 
-    MasterType* master = nullptr;
     ShapeType shape;
 
     std::vector<uint> node_ID;
@@ -289,7 +289,10 @@ inline void Element<dimension, MasterType, ShapeType, DataType>::ComputeUgp(cons
                                                                             std::vector<double>& u_gp) {
     std::fill(u_gp.begin(), u_gp.end(), 0.0);
 
+    assert( this->master );
+    assert( this->master->phi_gp.size() > 0);
     for (uint dof = 0; dof < u.size(); dof++) {
+        assert( this->master->phi_gp.at(dof).size() > 0);
         for (uint gp = 0; gp < u_gp.size(); gp++) {
             u_gp.at(gp) += u.at(dof) * this->master->phi_gp.at(dof).at(gp);
         }
