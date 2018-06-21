@@ -65,12 +65,17 @@ class HPXSimulationUnit
 
   private:
     void Parse();
+    HPX_DEFINE_COMPONENT_ACTION(HPXSimulationUnit, Parse, ParseAction);
 
     hpx::future<void> Stage();
+    HPX_DEFINE_COMPONENT_ACTION(HPXSimulationUnit, Stage, StageAction);
 
     hpx::future<void> Postprocessor();
+    HPX_DEFINE_COMPONENT_ACTION(HPXSimulationUnit, Postprocessor, PostprocessorAction);
 
     void SwapStates();
+    HPX_DEFINE_COMPONENT_ACTION(HPXSimulationUnit, SwapStates, SwapStatesAction);
+
 };
 
 template <typename ProblemType>
@@ -195,7 +200,8 @@ hpx::future<void> HPXSimulationUnit<ProblemType>::Stage() {
     auto assert_functor = [](auto& element)->bool {
         if ( element.master->phi_gp.size() > 0 ) { return true; }
 
-        std::cout << "On locality " << hpx::find_here() << std::endl;
+        std::cout << "On locality " << hpx::find_here() << '\n'
+        << "element " << element.GetID() << " master address: " << element.master << std::endl;
         return false;
     };
     this->mesh.CallForEachElement([assert_functor](auto& element) {
@@ -310,7 +316,8 @@ hpx::future<void> HPXSimulationUnit<ProblemType>::Step() {
     auto assert_functor = [](auto& element)->bool {
         if ( element.master->phi_gp.size() > 0 ) { return true; }
 
-        std::cout << "On locality " << hpx::find_here() << std::endl;
+        std::cout << "On locality " << hpx::find_here() << '\n'
+                  << "element " << element.GetID() << " master address: " << element.master << std::endl;
         return false;
     };
     this->mesh.CallForEachElement([assert_functor](auto& element) {
@@ -404,6 +411,9 @@ void HPXSimulationUnit<ProblemType>::load(Archive& ar, unsigned) {
     this->mesh.CallForEachElement([](auto& element) {
             assert(element.master);
             assert(element.master->phi_gp.size() > 0);
+            if ( element.GetID() == 330 ) {
+                std::cout << "element " << element.GetID() << " master address: " << element.master << std::endl;
+            }
         });
 
 
@@ -412,6 +422,10 @@ void HPXSimulationUnit<ProblemType>::load(Archive& ar, unsigned) {
     this->mesh.CallForEachElement([](auto& element) {
             assert(element.master);
             assert(element.master->phi_gp.size() > 0);
+            if ( element.GetID() == 330 ) {
+                std::cout << "element " << element.GetID() << " master address: " << element.master << std::endl;
+            }
+
         });
 
 }
