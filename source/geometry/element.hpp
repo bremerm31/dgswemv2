@@ -9,11 +9,11 @@ class Element {
 
   public:
     DataType data;
-    MasterType* master = nullptr;
 
   private:
     uint ID;
 
+    MasterType* master = nullptr;
     ShapeType shape;
 
     std::vector<uint> node_ID;
@@ -123,30 +123,30 @@ void Element<dimension, MasterType, ShapeType, DataType>::SetMaster(MasterType& 
         // DIFFERENTIATION FACTORS
         this->dpsi_fact.resize(this->master->dpsi.size());
         for (uint dof = 0; dof < this->master->dpsi.size(); dof++) {
-            this->dpsi_fact.at(dof).resize(dimension);
+            this->dpsi_fact[dof].resize(dimension);
             for (uint dir = 0; dir < dimension; dir++) {
-                this->dpsi_fact.at(dof).at(dir).reserve(this->master->dphi_gp.at(dof).at(dir).size());
-                for (uint gp = 0; gp < this->master->dphi_gp.at(dof).at(dir).size(); gp++) {
+                this->dpsi_fact[dof][dir].reserve(this->master->dphi_gp[dof][dir].size());
+                for (uint gp = 0; gp < this->master->dphi_gp[dof][dir].size(); gp++) {
                     double dpsi = 0;
                     for (uint z = 0; z < dimension; z++) {
-                        dpsi += this->master->dpsi.at(dof).at(z) * J_inv.at(z).at(dir).at(0);
+                        dpsi += this->master->dpsi[dof][z] * J_inv[z][dir][0];
                     }
-                    this->dpsi_fact.at(dof).at(dir).push_back(dpsi);
+                    this->dpsi_fact[dof][dir].push_back(dpsi);
                 }
             }
         }
 
         this->dphi_fact.resize(this->master->dphi_gp.size());
         for (uint dof = 0; dof < this->master->dphi_gp.size(); dof++) {
-            this->dphi_fact.at(dof).resize(dimension);
+            this->dphi_fact[dof].resize(dimension);
             for (uint dir = 0; dir < dimension; dir++) {
-                this->dphi_fact.at(dof).at(dir).reserve(this->master->dphi_gp.at(dof).at(dir).size());
-                for (uint gp = 0; gp < this->master->dphi_gp.at(dof).at(dir).size(); gp++) {
+                this->dphi_fact[dof][dir].reserve(this->master->dphi_gp[dof][dir].size());
+                for (uint gp = 0; gp < this->master->dphi_gp[dof][dir].size(); gp++) {
                     double dphi = 0;
                     for (uint z = 0; z < dimension; z++) {
-                        dphi += this->master->dphi_gp.at(dof).at(z).at(gp) * J_inv.at(z).at(dir).at(0);
+                        dphi += this->master->dphi_gp[dof][z][gp] * J_inv[z][dir][0];
                     }
-                    this->dphi_fact.at(dof).at(dir).push_back(dphi);
+                    this->dphi_fact[dof][dir].push_back(dphi);
                 }
             }
         }
@@ -154,28 +154,28 @@ void Element<dimension, MasterType, ShapeType, DataType>::SetMaster(MasterType& 
         // INTEGRATION OVER ELEMENT FACTORS
         this->int_fact = this->master->integration_rule.first;
         for (uint gp = 0; gp < this->int_fact.size(); gp++) {
-            this->int_fact.at(gp) *= std::abs(det_J.at(0));
+            this->int_fact[gp] *= std::abs(det_J[0]);
         }
 
         this->int_fact_phi = this->master->int_fact_phi;
         for (uint dof = 0; dof < this->int_fact_phi.size(); dof++) {
-            for (uint gp = 0; gp < this->int_fact_phi.at(dof).size(); gp++) {
-                this->int_fact_phi.at(dof).at(gp) *= std::abs(det_J.at(0));
+            for (uint gp = 0; gp < this->int_fact_phi[dof].size(); gp++) {
+                this->int_fact_phi[dof][gp] *= std::abs(det_J[0]);
             }
         }
 
         this->int_fact_dphi.resize(this->master->int_fact_dphi.size());
         for (uint dof = 0; dof < this->master->int_fact_dphi.size(); dof++) {
-            this->int_fact_dphi.at(dof).resize(dimension);
+            this->int_fact_dphi[dof].resize(dimension);
             for (uint dir = 0; dir < dimension; dir++) {
-                this->int_fact_dphi.at(dof).at(dir).reserve(this->master->int_fact_dphi.at(dof).at(dir).size());
-                for (uint gp = 0; gp < this->master->int_fact_dphi.at(dof).at(dir).size(); gp++) {
+                this->int_fact_dphi[dof][dir].reserve(this->master->int_fact_dphi[dof][dir].size());
+                for (uint gp = 0; gp < this->master->int_fact_dphi[dof][dir].size(); gp++) {
                     double int_dphi = 0;
                     for (uint z = 0; z < dimension; z++) {
-                        int_dphi += this->master->int_fact_dphi.at(dof).at(z).at(gp) * J_inv.at(z).at(dir).at(0);
+                        int_dphi += this->master->int_fact_dphi[dof][z][gp] * J_inv[z][dir][0];
                     }
-                    int_dphi *= std::abs(det_J.at(0));
-                    this->int_fact_dphi.at(dof).at(dir).push_back(int_dphi);
+                    int_dphi *= std::abs(det_J[0]);
+                    this->int_fact_dphi[dof][dir].push_back(int_dphi);
                 }
             }
         }
@@ -183,8 +183,8 @@ void Element<dimension, MasterType, ShapeType, DataType>::SetMaster(MasterType& 
         // MASS MATRIX
         this->m_inv = this->master->m_inv;
         for (uint i = 0; i < this->m_inv.second.size(); i++) {
-            for (uint j = 0; j < this->m_inv.second.at(i).size(); j++) {
-                this->m_inv.second.at(i).at(j) /= std::abs(det_J.at(0));
+            for (uint j = 0; j < this->m_inv.second[i].size(); j++) {
+                this->m_inv.second[i][j] /= std::abs(det_J[0]);
             }
         }
     } else {
@@ -468,36 +468,44 @@ double Element<dimension, MasterType, ShapeType, DataType>::ComputeResidualL2(co
     std::pair<std::vector<double>, std::vector<Point<2>>> rule = this->master->integration.GetRule(20);
     // At this point we use maximum possible p for Dunavant integration
 
+    assert(this->master);
+    auto* test = &this->master->basis;
+    //std::cout << test << std::endl;
+    //std::cout << this->ID << std::endl;
     Array2D<double> Phi = this->master->basis.GetPhi(this->master->p, rule.second);
+    assert( Phi.size() > 0 );
 
     std::vector<double> u_gp(rule.first.size());
     std::fill(u_gp.begin(), u_gp.end(), 0.0);
 
     for (uint dof = 0; dof < this->data.get_ndof(); dof++) {
         for (uint gp = 0; gp < u_gp.size(); gp++) {
-            u_gp[gp] += Phi[dof][gp] * u[dof];
+            u_gp[gp] += Phi.at(dof).at(gp) * u.at(dof);
         }
     }
+    //if ( true ) { std::cout << ID << " compute u at GP" << std::endl; }
 
     std::vector<Point<2>> gp_global = this->shape.LocalToGlobalCoordinates(rule.second);
 
+    //if ( true ) { std::cout << ID << " get global GP" << std::endl; }
     std::vector<double> f_gp(rule.first.size());
 
     for (uint gp = 0; gp < f_gp.size(); gp++) {
         f_gp[gp] = f(gp_global[gp]);
     }
+    //if ( true ) {std::cout << ID << " Evaluated function at gp" << std::endl; }
 
     std::vector<double> sq_diff(rule.first.size());
 
     for (uint gp = 0; gp < sq_diff.size(); gp++) {
-        sq_diff[gp] = pow((f_gp[gp] - u_gp[gp]), 2);
+        sq_diff[gp] = std::pow((f_gp.at(gp) - u_gp.at(gp)), 2);
     }
 
     double L2 = 0;
 
     if (const_J) {
         for (uint gp = 0; gp < sq_diff.size(); gp++) {
-            L2 += sq_diff[gp] * rule.first[gp];
+            L2 += sq_diff.at(gp) * rule.first.at(gp);
         }
 
         L2 *= std::abs(this->shape.GetJdet(rule.second)[0]);
@@ -505,6 +513,7 @@ double Element<dimension, MasterType, ShapeType, DataType>::ComputeResidualL2(co
         // Placeholder for nonconstant Jacobian
     }
 
+    //if ( ID == 330 ) { std::cout << "Computed L2 error" << std::endl; }
     return L2;
 }
 #ifdef HAS_HPX
