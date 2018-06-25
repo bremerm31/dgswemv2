@@ -43,7 +43,7 @@ if(USE_OMPI)
 endif()
 
 if(USE_HPX)
-  find_package(HPX REQUIRED)  
+  find_package(HPX REQUIRED)
 endif()
 
 set(CMAKE_VERBOSE_MAKEFILE OFF)
