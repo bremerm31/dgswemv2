@@ -17,10 +17,6 @@ class HPXSimulationUnit
                   hpx::components::component_base<HPXSimulationUnit<ProblemType>>
               > {
   private:
-/*    using BaseType = hpx::components::migration_support<
-                         hpx::components::component_base<HPXSimulationUnit<ProblemType>>
-                         >;*/
-
     Stepper stepper;
 
     Writer<ProblemType> writer;
@@ -66,17 +62,12 @@ class HPXSimulationUnit
 
   private:
     void Parse();
-    HPX_DEFINE_COMPONENT_ACTION(HPXSimulationUnit, Parse, ParseAction);
 
     hpx::future<void> Stage();
-    HPX_DEFINE_COMPONENT_ACTION(HPXSimulationUnit, Stage, StageAction);
 
     hpx::future<void> Postprocessor();
-    HPX_DEFINE_COMPONENT_ACTION(HPXSimulationUnit, Postprocessor, PostprocessorAction);
 
     void SwapStates();
-    HPX_DEFINE_COMPONENT_ACTION(HPXSimulationUnit, SwapStates, SwapStatesAction);
-
 };
 
 template <typename ProblemType>
@@ -111,7 +102,7 @@ HPXSimulationUnit<ProblemType>::HPXSimulationUnit(const std::string& input_strin
     initialize_mesh<ProblemType, HPXCommunicator>(
         this->mesh, input.mesh_data, this->communicator, this->problem_input, this->writer);
 
-        ProblemType::initialize_data_parallel_pre_send_kernel(this->mesh, input.mesh_data, this->problem_input);
+    ProblemType::initialize_data_parallel_pre_send_kernel(this->mesh, input.mesh_data, this->problem_input);
 }
 
 template <typename ProblemType>
@@ -165,10 +156,6 @@ hpx::future<void> HPXSimulationUnit<ProblemType>::Stage() {
     }
 
     this->Parse();
-
-    if (this->writer.WritingVerboseLog()) {
-        this->writer.GetLogFile() << "Finished Parse()" << std::endl;
-    }
 
     auto distributed_boundary_send_kernel = [this](auto& dbound) {
         ProblemType::distributed_boundary_send_kernel(this->stepper, dbound);
@@ -241,21 +228,13 @@ hpx::future<void> HPXSimulationUnit<ProblemType>::Stage() {
 
 template <typename ProblemType>
 hpx::future<void> HPXSimulationUnit<ProblemType>::Postprocessor() {
-/*    if (this->writer.WritingVerboseLog()) {
+    if (this->writer.WritingVerboseLog()) {
         this->writer.GetLogFile() << "Exchanging postprocessor data" << std::endl;
     }
 
     hpx::future<void> receive_future = this->communicator.ReceivePostprocAll(this->stepper.get_timestamp());
 
-    if (this->writer.WritingVerboseLog()) {
-        this->writer.GetLogFile() << "postprocessor_parallel_pre_send_kernel" << std::endl;
-    }
-
     ProblemType::postprocessor_parallel_pre_send_kernel(this->stepper, this->mesh);
-
-    if (this->writer.WritingVerboseLog()) {
-        this->writer.GetLogFile() << "sendpostprocall" << std::endl;
-    }
 
     this->communicator.SendPostprocAll(this->stepper.get_timestamp());
 
@@ -283,9 +262,7 @@ hpx::future<void> HPXSimulationUnit<ProblemType>::Postprocessor() {
         if (this->writer.WritingVerboseLog()) {
             this->writer.GetLogFile() << "Finished postprocessor work after receive" << std::endl << std::endl;
         }
-        });*/
-    ++(this->stepper);
-    return hpx::make_ready_future();
+        })
 }
 
 template <typename ProblemType>
@@ -305,17 +282,19 @@ hpx::future<void> HPXSimulationUnit<ProblemType>::Step() {
 
     for (uint stage = 0; stage < this->stepper.get_num_stages(); stage++) {
 
-        step_future = step_future.then([this](auto&&) {
+        step_future = step_future.then([this](auto&& f) {
+                f.get();
                 return this->Stage();
             });
 
-        step_future = step_future.then([this](auto&&) {
+        step_future = step_future.then([this](auto&& f) {
+                f.get();
                 return this->Postprocessor();
-                });
+            });
     }
 
-    return step_future.then([this](auto&&) {
-            assert(this->submesh_model);
+    return step_future.then([this](auto&& f) {
+            f.get();
             this->submesh_model->InStep(0,0);
             this->SwapStates();
             });
