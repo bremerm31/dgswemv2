@@ -289,12 +289,9 @@ inline void Element<dimension, MasterType, ShapeType, DataType>::ComputeUgp(cons
                                                                             std::vector<double>& u_gp) {
     std::fill(u_gp.begin(), u_gp.end(), 0.0);
 
-    assert( this->master );
-    assert( this->master->phi_gp.size() > 0);
     for (uint dof = 0; dof < u.size(); dof++) {
-        assert( this->master->phi_gp.at(dof).size() > 0);
         for (uint gp = 0; gp < u_gp.size(); gp++) {
-            u_gp.at(gp) += u.at(dof) * this->master->phi_gp.at(dof).at(gp);
+            u_gp[gp] += u[dof] * this->master->phi_gp[dof][gp];
         }
     }
 }
@@ -316,7 +313,6 @@ template <uint dimension, typename MasterType, typename ShapeType, typename Data
 inline void Element<dimension, MasterType, ShapeType, DataType>::ComputeLinearUgp(const std::vector<double>& u_lin,
                                                                                   std::vector<double>& u_lin_gp) {
 
-    assert(this->master);
     std::fill(u_lin_gp.begin(), u_lin_gp.end(), 0.0);
 
     for (uint dof = 0; dof < u_lin.size(); dof++) {
@@ -468,44 +464,36 @@ double Element<dimension, MasterType, ShapeType, DataType>::ComputeResidualL2(co
     std::pair<std::vector<double>, std::vector<Point<2>>> rule = this->master->integration.GetRule(20);
     // At this point we use maximum possible p for Dunavant integration
 
-    assert(this->master);
-    auto* test = &this->master->basis;
-    //std::cout << test << std::endl;
-    //std::cout << this->ID << std::endl;
     Array2D<double> Phi = this->master->basis.GetPhi(this->master->p, rule.second);
-    assert( Phi.size() > 0 );
 
     std::vector<double> u_gp(rule.first.size());
     std::fill(u_gp.begin(), u_gp.end(), 0.0);
 
     for (uint dof = 0; dof < this->data.get_ndof(); dof++) {
         for (uint gp = 0; gp < u_gp.size(); gp++) {
-            u_gp[gp] += Phi.at(dof).at(gp) * u.at(dof);
+            u_gp[gp] += Phi[dof][gp] * u[dof];
         }
     }
-    //if ( true ) { std::cout << ID << " compute u at GP" << std::endl; }
 
     std::vector<Point<2>> gp_global = this->shape.LocalToGlobalCoordinates(rule.second);
 
-    //if ( true ) { std::cout << ID << " get global GP" << std::endl; }
     std::vector<double> f_gp(rule.first.size());
 
     for (uint gp = 0; gp < f_gp.size(); gp++) {
         f_gp[gp] = f(gp_global[gp]);
     }
-    //if ( true ) {std::cout << ID << " Evaluated function at gp" << std::endl; }
 
     std::vector<double> sq_diff(rule.first.size());
 
     for (uint gp = 0; gp < sq_diff.size(); gp++) {
-        sq_diff[gp] = std::pow((f_gp.at(gp) - u_gp.at(gp)), 2);
+        sq_diff[gp] = std::pow((f_gp[gp] - u_gp[gp]), 2);
     }
 
     double L2 = 0;
 
     if (const_J) {
         for (uint gp = 0; gp < sq_diff.size(); gp++) {
-            L2 += sq_diff.at(gp) * rule.first.at(gp);
+            L2 += sq_diff[gp] * rule.first[gp];
         }
 
         L2 *= std::abs(this->shape.GetJdet(rule.second)[0]);
@@ -513,7 +501,6 @@ double Element<dimension, MasterType, ShapeType, DataType>::ComputeResidualL2(co
         // Placeholder for nonconstant Jacobian
     }
 
-    //if ( ID == 330 ) { std::cout << "Computed L2 error" << std::endl; }
     return L2;
 }
 #ifdef HAS_HPX
