@@ -262,7 +262,7 @@ hpx::future<void> HPXSimulationUnit<ProblemType>::Postprocessor() {
         if (this->writer.WritingVerboseLog()) {
             this->writer.GetLogFile() << "Finished postprocessor work after receive" << std::endl << std::endl;
         }
-        })
+        });
 }
 
 template <typename ProblemType>
