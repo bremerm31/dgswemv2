@@ -33,18 +33,18 @@ void Problem::volume_kernel(const Stepper& stepper, ElementType& elt) {
                 internal.qx_at_gp[gp] * internal.qy_at_gp[gp] / internal.h_at_gp[gp];
             internal.qy_flux_at_gp[GlobalCoord::y][gp] = std::pow(internal.qy_at_gp[gp], 2) / internal.h_at_gp[gp] +
                                                          Global::g * (0.5 * std::pow(internal.ze_at_gp[gp], 2) +
-                                                             internal.ze_at_gp[gp] * internal.bath_at_gp[gp]);
+                                                                      internal.ze_at_gp[gp] * internal.bath_at_gp[gp]);
         }
 
         for (uint dof = 0; dof < elt.data.get_ndof(); ++dof) {
-            state.rhs_ze.at(dof) = elt.IntegrationDPhi(GlobalCoord::x, dof, internal.ze_flux_at_gp[GlobalCoord::x]) +
-                                   elt.IntegrationDPhi(GlobalCoord::y, dof, internal.ze_flux_at_gp[GlobalCoord::y]);
+            state.rhs_ze[dof] = elt.IntegrationDPhi(GlobalCoord::x, dof, internal.ze_flux_at_gp[GlobalCoord::x]) +
+                                elt.IntegrationDPhi(GlobalCoord::y, dof, internal.ze_flux_at_gp[GlobalCoord::y]);
 
-            state.rhs_qx.at(dof) = elt.IntegrationDPhi(GlobalCoord::x, dof, internal.qx_flux_at_gp[GlobalCoord::x]) +
-                                   elt.IntegrationDPhi(GlobalCoord::y, dof, internal.qx_flux_at_gp[GlobalCoord::y]);
+            state.rhs_qx[dof] = elt.IntegrationDPhi(GlobalCoord::x, dof, internal.qx_flux_at_gp[GlobalCoord::x]) +
+                                elt.IntegrationDPhi(GlobalCoord::y, dof, internal.qx_flux_at_gp[GlobalCoord::y]);
 
-            state.rhs_qy.at(dof) = elt.IntegrationDPhi(GlobalCoord::x, dof, internal.qy_flux_at_gp[GlobalCoord::x]) +
-                                   elt.IntegrationDPhi(GlobalCoord::y, dof, internal.qy_flux_at_gp[GlobalCoord::y]);
+            state.rhs_qy[dof] = elt.IntegrationDPhi(GlobalCoord::x, dof, internal.qy_flux_at_gp[GlobalCoord::x]) +
+                                elt.IntegrationDPhi(GlobalCoord::y, dof, internal.qy_flux_at_gp[GlobalCoord::y]);
         }
     }
 }
