@@ -101,24 +101,8 @@ class Mesh<std::tuple<Elements...>,
         });
     }
 
-#ifdef HAS_HPX
-    template <typename Archive>
-     void save(Archive& ar, unsigned) const {
-        ar & mesh_name & p;
-        Utilities::for_each_in_tuple(elements.data, [&ar](auto& element_map) {
-                ar & element_map;
-        });
-    }
-
-    template <typename Archive>
-     void load(Archive& ar, unsigned) {
-        ar & mesh_name & p;
-
+    void SetMasters() {
         this->masters = master_maker<MasterElementTypes>::construct_masters(p);
-
-        Utilities::for_each_in_tuple(elements.data, [&ar](auto& element_map) {
-                ar & element_map;
-        });
 
         this->CallForEachElement([this](auto& element) {
                 using MasterType = typename std::remove_reference<decltype(element)>::type::ElementMasterType;
@@ -126,16 +110,17 @@ class Mesh<std::tuple<Elements...>,
                 MasterType& master_elt = std::get<Utilities::index<
                     MasterType, MasterElementTypes>::value>(this->masters);
                 element.SetMaster(master_elt);
-                assert( element.master == &master_elt );
-            });
-
-        this->CallForEachElement([](auto& element) {
-                assert( element.master );
-                assert( element.master->phi_gp.size() > 0);
             });
     }
 
-    HPX_SERIALIZATION_SPLIT_MEMBER()
+#ifdef HAS_HPX
+    template <typename Archive>
+     void serialize(Archive& ar, unsigned) {
+        ar & mesh_name & p;
+        Utilities::for_each_in_tuple(elements.data, [&ar](auto& element_map) {
+                ar & element_map;
+        });
+    }
 #endif
 };
 }

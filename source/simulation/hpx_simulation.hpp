@@ -74,7 +74,6 @@ class HPXSimulation : public hpx::components::component_base<HPXSimulation<Probl
 
         hpx::when_all(registration_futures).get();
         lb_future.get();
-        std::cout << "Leaving HPXSimulation COnstructor" << std::endl;
     }
 
     hpx::future<void> Run();
@@ -98,9 +97,6 @@ hpx::future<void> HPXSimulation<ProblemType>::Run() {
                 .then([this, sim_id](auto&&) { return this->simulation_unit_clients[sim_id].Launch(); });
     }
 
-    hpx::cout << this->n_steps << '\n'
-              << this->simulation_unit_clients.size() << hpx::endl;
-
     for (uint step = 1; step <= this->n_steps; step++) {
         for (uint sim_id = 0; sim_id < this->simulation_unit_clients.size(); sim_id++) {
             simulation_futures[sim_id] =
@@ -120,7 +116,6 @@ hpx::future<void> HPXSimulation<ProblemType>::Run() {
 
     return hpx::when_all(simulation_futures).then([](auto&&) {
             LoadBalancer::AbstractFactory::reset_locality_and_world_models<ProblemType>();
-            std::cout << "leaving hpx simulation::Run()" << std::endl;
         });
 }
 
