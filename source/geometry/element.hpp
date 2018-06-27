@@ -287,6 +287,7 @@ inline void Element<dimension, MasterType, ShapeType, DataType>::ComputeFgp(cons
 template <uint dimension, typename MasterType, typename ShapeType, typename DataType>
 inline void Element<dimension, MasterType, ShapeType, DataType>::ComputeUgp(const std::vector<double>& u,
                                                                             std::vector<double>& u_gp) {
+    assert(this->master);
     std::fill(u_gp.begin(), u_gp.end(), 0.0);
 
     for (uint dof = 0; dof < u.size(); dof++) {

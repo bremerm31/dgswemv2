@@ -345,13 +345,13 @@ void HPXSimulationUnit<ProblemType>::save(Archive& ar, unsigned) const {
         this->writer.GetLogFile() << "Departing from locality " << hpx::get_locality_id() << std::endl;
     }
 
-    ar & stepper & writer & parser & mesh & problem_input & submesh_model;
+    ar & stepper & writer & parser & mesh & problem_input & communicator & submesh_model;
 }
 
 template <typename ProblemType>
 template <typename Archive>
 void HPXSimulationUnit<ProblemType>::load(Archive& ar, unsigned) {
-    ar & stepper & writer & parser & mesh & problem_input & submesh_model;
+    ar & stepper & writer & parser & mesh & problem_input & communicator & submesh_model;
 
     this->writer.StartLog();
 
